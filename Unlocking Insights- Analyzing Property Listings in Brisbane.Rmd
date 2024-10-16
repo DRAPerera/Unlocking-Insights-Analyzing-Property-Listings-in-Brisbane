@@ -1,0 +1,433 @@
+---
+title: "Assignment2"
+output: html_notebook
+---
+
+#Question 1.1
+
+Typically, data analysis and cleaning are the first steps in obtaining insights from Airbnb's collection of property listings in Brisbane. The process involves loading the dataset (using'read_csv()'), analyzing its structure, variables, and summary statistics using str() and summary(); determining whether any values are missing (using 'colSums(is.na()') or inconsistent. Descriptive statistics are next performed to evaluate the distribution of important variables, in this case price, property types, and review scores, once the data has been cleaned and arranged. To obtain additional understanding of the patterns and correlations in the data, visualizations like scatter plots, boxplots, and histograms can be used. These preliminary actions set the stage for a more thorough examination and interpretation of the dataset.
+
+```{r}
+#install.packages("readr")
+#install.packages("dplyr")
+library(readr)
+library(dplyr)
+#install.packages('tidyverse')
+library(tidyverse)
+```
+
+```{r read-data}
+#Question 1.2
+listings <- read_csv("listings.csv")
+
+# Selecting required columns
+listings <- listings[, c("id", "name", "description", "host_name", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms_text", "bedrooms", "beds", "amenities", "price", "number_of_reviews", "number_of_reviews_ltm", "review_scores_rating", "review_scores_accuracy", "review_scores_cleanliness", "review_scores_checkin", "review_scores_communication", "review_scores_location", "review_scores_value", "host_is_superhost")]
+
+# Correcting data types
+listings$accommodates <- as.integer(listings$accommodates)
+listings$bedrooms <- as.integer(listings$bedrooms)
+listings$beds <- as.integer(listings$beds)
+listings$price <- as.numeric(gsub("[$,]", "", listings$price))
+
+# Display summary of the dataframe
+summary(listings)
+```
+
+```{r}
+#Question 1.3
+library(stringr)
+
+#Question 1.3a.Listings with 'Airport' in their name
+airport_listings <- sum(str_detect(tolower(listings$name), "airport"))
+
+cat("Listings with 'Airport' in their name:", airport_listings, "\n")
+
+#Question 1.3b.Listings with 'Airport' and 'CBD' in their name
+airport_cbd_listings <- sum(str_detect(tolower(listings$name), "airport") & str_detect(tolower(listings$name), "cbd"))
+
+cat("Listings with both 'Airport' and 'CBD' in their name:", airport_cbd_listings, "\n")
+```
+
+```{r}
+#Question 1.4
+library(dplyr)
+
+neighborhood_reviews <- listings %>%
+  group_by(neighbourhood_cleansed) %>% summarise(total_reviews = sum(number_of_reviews, na.rm = TRUE),
+            avg_rating = mean(review_scores_rating, na.rm = TRUE))
+
+
+top_ten_neighborhoods <- neighborhood_reviews %>%
+  top_n(10, total_reviews) %>%
+  arrange(desc(total_reviews))
+
+top_ten_neighborhoods
+```
+
+```{r}
+#Question 1.5
+
+#library(dplyr)
+
+superhost_comparison <- listings %>%
+  group_by(host_is_superhost) %>%
+  summarize(average_review_rating = mean(review_scores_rating, na.rm = TRUE),
+            total_reviews = sum(number_of_reviews, na.rm = TRUE))
+
+superhost_comparison
+```
+
+```{r}
+#Question 1.6
+wynnum <- listings %>%
+  filter(tolower(neighbourhood_cleansed) == "wynnum")
+
+wynnum_stats <- wynnum %>%
+  group_by(property_type) %>%
+  summarize(average_price = mean(price, na.rm = TRUE),
+            average_review_score = mean(review_scores_rating, na.rm = TRUE))
+
+wynnum_stats
+```
+
+```{r}
+#Question 1.7
+
+# Definition of criteria
+neighbourhood_criteria <- "Spring Hill"
+max_price_criteria <- 200
+property_type_criteria <- c("Entire rental unit")
+required_amenities_criteria <- c("Smoke alarm")
+min_accommodates_criteria <- 4
+
+# Filter listings based on criteria
+filtered_listings <- listings %>%
+  filter(tolower(neighbourhood_cleansed) == tolower(neighbourhood_criteria),
+         price <= max_price_criteria,
+         property_type %in% property_type_criteria,
+         str_detect(tolower(amenities), tolower(paste(required_amenities_criteria, collapse = "|"))),
+         accommodates >= min_accommodates_criteria)
+
+# Limit the number of listings to have at least 5 and at most 20
+filtered_listings <- filtered_listings[1:20, ]
+
+# Display only the name and relevant columns
+relevant_columns <- c("name", "neighbourhood_cleansed", "property_type", "accommodates", "price", "amenities")
+
+filtered_listings[ , relevant_columns]
+
+```
+
+```{r}
+#Question 1.8
+#install.packages("ggplot2")
+library(ggplot2)
+
+property_type_count <- listings %>%
+  count(property_type, sort = TRUE) %>%
+  top_n(10, n)
+property_type_count
+
+ggplot(property_type_count, aes(x = reorder(property_type, n), y = n)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Number of Top 10 Listings based on Property Types",
+       x = "Property Type",
+       y = "Number of Listings") +
+  theme_minimal()
+```
+
+The number of listings for the top ten categories of properties in Brisbane is shown in the bar chart. "Entire rental units" and "Entire homes" are the most common property categories, clearly surpassing other property types like "private room" and "townhouse". This study emphasizes that guests in Brisbane clearly prefer independent lodging over shared rooms, indicating the significance of providing entire units or homes to accommodate consumer preferences.
+
+```{r}
+#Question 1.9
+
+#Question 1.9 a)Overall Experience
+ggplot(listings, aes(x = review_scores_rating)) +
+  geom_histogram(binwidth = 5, fill = "blue", color = "black") +
+  labs(title = "Overall Experience Review Scores",
+       x = "Review Score",
+       y = "Count") +
+  theme_minimal()
+
+
+#Question 1.9 b)Accuracy
+ggplot(listings, aes(x = review_scores_accuracy)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Accuracy Review Scores",
+       x = "Review Score",
+       y = "Count") +
+  theme_minimal()
+
+#Question 1.9 c)Cleanliness
+ggplot(listings, aes(x = review_scores_cleanliness)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Cleanliness Review Scores",
+       x = "Review Score",
+       y = "Count") +
+  theme_minimal()
+
+#Question 1.9 d)Checkin
+ggplot(listings, aes(x = review_scores_checkin)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Checkin Review Scores",
+       x = "Review Score",
+       y = "Count") +
+  theme_minimal()
+
+#Question 1.9 e)Communication
+ggplot(listings, aes(x = review_scores_communication)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Communication Review Scores",
+       x = "Review Score",
+       y = "Count") +
+  theme_minimal()
+
+#Question 1.9 f)Location
+ggplot(listings, aes(x = review_scores_location)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Location Review Scores",
+       x = "Review Score",
+       y = "Count") +
+  theme_minimal()
+
+#Question 1.9 g)Value
+ggplot(listings, aes(x = review_scores_value)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Value Review Scores",
+       x = "Review Score",
+       y = "Count") +
+  theme_minimal()
+```
+
+a) **Overall Experience**: The majority of listings receive review scores between 2.5 and 7.5. Specifically, there are around 4000 listings with review scores ranging from 2.5 to 5.0, and another 4000 listings with review scores ranging from 5.0 to 7.5. This suggests that while some listings provide satisfactory experiences, there is room for improvement in enhancing overall guest satisfaction across the board.
+
+b) **Accuracy**: The distribution of accuracy review scores indicates that the majority of listings receive high scores. Specifically, there are less than 100 listings with a score of 3, nearly 500 listings with a score of 4, and approximately 4000 listings with a score of 5. This suggests that most guests find that the listing accurately describes the space.
+
+c)**Cleanliness**: Similarly, most listings receive high cleanliness review scores. There are approximately 100 listings with a score of 3, around 750 listings with a score of 4, and about 3500 listings with a score of 5. This indicates that guests are generally satisfied with the cleanliness and tidiness of the spaces.
+
+d)**Checkin**: The distribution of checkin review scores also skews towards high ratings, with the majority of listings receiving a score of 5. There are less than 100 listings with a score of 3, around 500 listings with a score of 4, and nearly 3500 listings with a score of 5. This suggests that most guests have smooth check-in experiences.
+
+e)**Communication**: Communication review scores also tend to be high, with the majority of listings receiving a score of 5. There are less than 100 listings with a score of 3, more than 250 listings with a score of 4, and slightly over 3500 listings with a score of 5. This indicates effective communication between hosts and guests before and during their stay.
+
+f)**Location**: The distribution of location review scores varies more compared to other categories. There are less than 50 listings with a score of 3, around 400 listings with a score of 4, and approximately 3600 listings with a score of 5. This suggests that opinions about the location and neighborhood are more mixed among guests.
+
+g)**Value**: Review scores for value also vary, with most listings receiving high scores. There are about 100 listings with a score of 3, approximately 750 listings with a score of 4, and around 3250 listings with a score of 5. This indicates differing perceptions among guests regarding whether the listing offers good value for the price.
+
+**TASK 02**
+
+```{r}
+#Question 2.1
+#install.packages("readr")
+#install.packages("dplyr")
+library(readxl)
+library(dplyr)
+
+census_2016 <- read_excel("census.xlsx", sheet = "2016",skip = 1)
+
+str(census_2016)
+```
+
+```{r}
+#Question 2.2
+
+# Check and display unique values in the first column
+unique_values <- unique(census_2016$Stat)
+print(unique_values)
+
+#by running the above code, i was able to obtain the unique values, thus, was able to identify any unusual values. For example, in here "3 or bedrooms" could be identified as a typo. Therefore, it can be corrected by following:
+census_2016$Stat <- ifelse(census_2016$Stat == "3 or bedrooms", "3 bedrooms", census_2016$Stat)
+
+unique_values_corrected <- unique(census_2016$Stat)
+
+print(unique_values_corrected)
+```
+
+```{r}
+#Question 2.3
+
+#install.packages("tidyr")
+library(readxl)
+library(tidyr)
+
+census_2016 <- separate(census_2016, col = "Count/Percentage", into = c("Count", "Percentage"), sep = "/")
+
+census_2016
+```
+
+```{r}
+#Question 2.4
+
+library(dplyr)
+library(tidyr)
+
+census_2016_count <- census_2016 %>% select(-Percentage)
+str(census_2016_count)
+
+column_count<- nrow(census_2016_count)/9
+column_count
+
+census_2016_wider <- census_2016_count %>% select(Stat,Count)%>% mutate(row_num = rep(1:column_count,each=9))%>% pivot_wider(names_from = Stat,values_from = Count)%>%select(-row_num)
+
+census_2016_wider
+```
+
+```{r}
+#Question 2.5
+
+census_2016$Year <- 2016
+
+census_2016 <- census_2016 %>%
+  mutate(
+    Region = as.character('Region'), 
+    br_count_0 = as.integer('None (includes bedsitters)'),
+    br_count_1 = as.integer('1 bedroom'),
+    br_count_2 = as.integer('2 bedrooms'),
+    br_count_3 = as.integer('3 bedrooms'),
+    br_count_4_or_more = as.integer('4 or more bedrooms'),
+    br_count_unstated = as.integer('Number of bedrooms not stated'),
+    av_per_dwelling = as.numeric('Average number of bedrooms per dwelling'),
+    av_per_household = as.numeric('Average number of people per household')
+  )
+
+names(census_2016) <- c("Region", "Year", "br_count_0", "br_count_1", "br_count_2", "br_count_3", "br_count_4_or_more", "br_count_unstated", "av_per_dwelling", "av_per_household")
+
+census_2016 <- census_2016[, c("Region", "Year", "br_count_0", "br_count_1", "br_count_2", "br_count_3", "br_count_4_or_more", "br_count_unstated", "av_per_dwelling", "av_per_household")]
+
+census_2016
+```
+
+```{r}
+#Question 2.6
+
+# Check for duplicated regions
+duplicated_Regions <- census_2016$Region[duplicated(census_2016$Region)]
+
+# Count the number of duplicated regions
+num_duplicates <- length(duplicated_Regions)
+
+# Show the duplicated regions
+print(duplicated_Regions)
+
+#Remove duplicates
+census_2016 <- census_2016 %>%
+  distinct(Region, .keep_all = TRUE)
+
+summary(census_2016)
+```
+
+```{r}
+#Question 2.7
+
+clean_census_data <- function(year) {
+  # Read in the dataset for the given year
+  census_data <- read_excel("census.xlsx", sheet = as.character(year))
+  
+  # Examine and fix any inconsistent values in the first column
+  if ("Stat" %in% colnames(census_data)) {
+    incorrect_value <- "3 or bedrooms"
+    corrected_value <- "3 bedrooms"
+    census_data$Stat[census_data$Stat == incorrect_value] <- corrected_value
+  }
+  
+  # Split the values in the "Count/Percentage" column into separate columns
+  if ("Count/Percentage" %in% colnames(census_data)) {
+    census_data <- separate(census_data, 
+                            col = "Count/Percentage", 
+                            into = c("Count", "Percentage"), 
+                            sep = "/")
+  }
+  
+  # Remove the percentage column if present
+  if ("Percentage" %in% colnames(census_data)) {
+    census_data <- select(census_data, -Percentage)
+  }
+  
+  # Transform data to have each statistic shown in one column
+  if ("Stat" %in% colnames(census_data)) {
+    census_data <- census_data %>%
+      pivot_wider(names_from = Stat, values_from = Count)
+  }
+  
+  # Add a column for the year of the data
+  census_data$year <- year
+  
+  # Reorder columns
+  col_order <- c("Region", "year", "br_count_0", "br_count_1", "br_count_2", "br_count_3", "br_count_4_or_more", "br_count_unstated", "av_per_dwelling", "av_per_household")
+  if (all(col_order %in% colnames(census_data))) {
+    census_data <- census_data[, col_order]
+  }
+  
+  # Convert columns to appropriate types if needed
+  numeric_cols <- c("br_count_0", "br_count_1", "br_count_2", "br_count_3", "br_count_4_or_more", "br_count_unstated", "av_per_dwelling", "av_per_household")
+  if (all(numeric_cols %in% colnames(census_data))) {
+    census_data <- census_data %>%
+      mutate_at(vars(-Region, -year), as.numeric)
+  }
+  
+  # Remove duplicated regions if present
+  if (any(duplicated(census_data$Region))) {
+    census_data <- census_data[!duplicated(census_data$Region), ]
+  }
+  
+  return(census_data)
+}
+```
+
+```{r}
+#Question 2.8
+
+# Load the dplyr package
+library(dplyr)
+
+# Call the defined function to obtain cleaned dataframes for 2011 and 2016
+cleaned_census_2011 <- clean_census_data(2011)
+cleaned_census_2016 <- clean_census_data(2016)
+
+# Combine the dataframes into one dataframe
+combined_census_data <- bind_rows(cleaned_census_2011, cleaned_census_2016)
+
+# Display the first few rows of the combined dataframe
+combined_census_data
+```
+
+```{r}
+#Question 2.9
+# Check for missing values
+missing_values <- sum(is.na(combined_census_data))
+
+# Check for duplicated regions
+duplicated_regions <- combined_census_data$Region[duplicated(combined_census_data$Region)]
+
+# Display the number of missing values and duplicated regions
+print(paste("Number of missing values:", missing_values))
+print(paste("Duplicated regions:", duplicated_regions))
+
+# If missing values or duplicated regions are present, fix them
+if (missing_values > 0 || length(duplicated_regions) > 0) {
+  # Remove rows with missing values
+  combined_census_data <- na.omit(combined_census_data)
+  
+  # Remove duplicated regions
+  combined_census_data <- combined_census_data[!duplicated(combined_census_data$Region), ]
+}
+
+# Show a summary of the combined dataframe
+summary(combined_census_data)
+
+```
+
+```{r}
+# Calculate the difference in the number of 2-bedroom houses between 2016 and 2011
+combined_census_data <- combined_census_data %>%
+  mutate(decrease_2_bedroom = br_count_2_2016 - br_count_2_2011)
+
+# Find the region with the largest decrease in the number of 2-bedroom houses
+largest_decrease_region <- combined_census_data %>%
+  filter(decrease_2_bedroom == min(decrease_2_bedroom)) %>%
+  select(Region, decrease_2_bedroom)
+
+# Print the region with the largest decrease
+print(largest_decrease_region)
+
+```
