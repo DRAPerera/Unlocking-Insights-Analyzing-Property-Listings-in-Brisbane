@@ -1,0 +1,3 @@
+Unlocking Insights: Analyzing Property Listings in Brisbane
+
+This project explores the vast dataset of property listings on Airbnb in Brisbane, Australia. As the hospitality landscape evolves, understanding market dynamics is crucial for enhancing the experience of both hosts and guests. By leveraging data analytics techniques, this analysis aims to uncover actionable insights into market trends, pricing strategies, and user preferences. The findings will not only inform strategic decisions for Airbnb but also optimize the platform's offerings to better meet the needs of its community. The project involves addressing specific guiding questions to drive the analysis and provide valuable recommendations for stakeholders.
